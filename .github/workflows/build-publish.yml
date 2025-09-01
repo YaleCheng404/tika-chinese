@@ -1,0 +1,60 @@
+name: Build & Publish Tika (Chinese)
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "Dockerfile.tika-chinese", ".github/workflows/build-publish.yml" ]
+  release:
+    types: [published]
+  schedule:
+    # 每周一 07:00 UTC 定时重建，追踪 apache/tika:latest-full 的更新
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+  packages: write   # 关键：允许推到 GHCR
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 可选：缓存以提速（BuildKit cache 到 GitHub Actions cache）
+      - name: Prepare cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}  # GitHub 自动注入
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.tika-chinese
+          push: true
+          # 你的命名：ghcr.io/<GitHub用户名或组织>/<仓库名>:<tag>
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/tika-chinese:latest
+            ghcr.io/${{ github.repository_owner }}/tika-chinese:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      - name: Move cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
