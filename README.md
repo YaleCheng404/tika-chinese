@@ -6,11 +6,7 @@
 - 手动触发构建（可自定义标签与多架构）
 
 ## 状态
-<!-- 在 GitHub 仓库的 Actions 页面，选择该工作流，使用右侧菜单生成徽章 Markdown 并替换下行链接 -->
-[![Build & Publish](https://github.com/<OWNER>/<REPO>/actions/workflows/build-publish.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/build-publish.yml)
-
-> 生成徽章的官方方法：进入仓库 **Actions** → 选择工作流 → 右侧三点菜单 **Create status badge**，复制 Markdown。  
->（参考：GitHub Docs《Adding a workflow status badge》）  
+[![Build & Publish Tika (Chinese)](https://github.com/YaleCheng404/tika-chinese/actions/workflows/build-publish.yml/badge.svg)](https://github.com/YaleCheng404/tika-chinese/actions/workflows/build-publish.yml)
 
 ## 快速开始
 
