@@ -37,14 +37,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (for multi-arch)
+      - name: Set up QEMU (multi-arch)
         if: ${{ github.event.inputs.platforms && contains(github.event.inputs.platforms, 'arm') }}
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 可选缓存：提升重复构建速度
       - name: Restore build cache
         uses: actions/cache@v4
         with:
@@ -52,6 +51,16 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+
+      # 关键：将 OWNER/REPO 都转为小写，供 tag 使用
+      - name: Compute lowercase names
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+          # 仓库名来自 GITHUB_REPOSITORY=Owner/Repo，取斜杠后部分再转小写
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          echo "REPO_LC=${REPO_NAME,,}" >> $GITHUB_ENV
+          # 可自定义镜像名（本例固定为 tika-chinese）
+          echo "IMAGE_NAME=tika-chinese" >> $GITHUB_ENV
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -68,17 +77,16 @@ jobs:
           file: ./Dockerfile.tika-chinese
           push: true
           platforms: ${{ inputs.platforms || 'linux/amd64' }}
-          # 根据输入生成 tag；另推一份不可变的 SHA tag 便于追溯
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/tika-chinese:${{ inputs.tag || 'latest' }}
-            ghcr.io/${{ github.repository_owner }}/tika-chinese:${{ github.sha }}
-          # 强制拉取最新基础镜像以追踪 upstream
           pull: ${{ inputs.pull_base || 'true' }}
+          tags: |
+            ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:${{ inputs.tag || 'latest' }}
+            ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
+      # 只有构建成功才移动缓存，避免你日志里的二次报错
       - name: Move cache
-        if: always()
+        if: ${{ success() && steps.build.outcome == 'success' }}
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
