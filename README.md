@@ -12,4 +12,6 @@
 
 ### 拉取镜像（GHCR）
 ```bash
-docker pull ghcr.io/<OWNER>/tika-chinese:latest
+docker pull ghcr.io/yalecheng404/tika-chinese:latest
+docker run --rm -p 9998:9998 ghcr.io/yalecheng404/tika-chinese:latest
+```
