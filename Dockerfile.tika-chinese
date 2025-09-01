@@ -1,3 +1,7 @@
+# This Dockerfile is a modification of Apache Tika’s official Dockerfile.
+# Modifications: Added installation of Chinese OCR language packs (chi_sim, chi_tra).
+# Original copyright and NOTICE have been preserved per Apache License 2.0.
+
 FROM apache/tika:latest-full
 USER root
 RUN set -eux \
