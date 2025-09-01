@@ -3,16 +3,32 @@ name: Build & Publish Tika (Chinese)
 on:
   push:
     branches: [ "main" ]
-    paths: [ "Dockerfile.tika-chinese", ".github/workflows/build-publish.yml" ]
+    paths:
+      - "Dockerfile.tika-chinese"
+      - ".github/workflows/build-publish.yml"
   release:
     types: [published]
   schedule:
-    # 每周一 07:00 UTC 定时重建，追踪 apache/tika:latest-full 的更新
+    # 每周一 07:00 UTC 定时重建，跟进 apache/tika:latest-full 的更新
     - cron: "0 7 * * 1"
+  workflow_dispatch:            # ← 手动触发
+    inputs:
+      tag:
+        description: "镜像标签（默认 latest）"
+        required: false
+        default: "latest"
+      platforms:
+        description: "多架构（如 linux/amd64,linux/arm64）"
+        required: false
+        default: "linux/amd64"
+      pull_base:
+        description: "强制拉取最新基础镜像（true/false）"
+        required: false
+        default: "true"
 
 permissions:
   contents: read
-  packages: write   # 关键：允许推到 GHCR
+  packages: write   # 推送到 GHCR 的关键权限
 
 jobs:
   build-and-push:
@@ -21,11 +37,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up QEMU (for multi-arch)
+        if: ${{ github.event.inputs.platforms && contains(github.event.inputs.platforms, 'arm') }}
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 可选：缓存以提速（BuildKit cache 到 GitHub Actions cache）
-      - name: Prepare cache
+      # 可选缓存：提升重复构建速度
+      - name: Restore build cache
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
@@ -38,20 +58,24 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # GitHub 自动注入
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & Push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.tika-chinese
           push: true
-          # 你的命名：ghcr.io/<GitHub用户名或组织>/<仓库名>:<tag>
+          platforms: ${{ inputs.platforms || 'linux/amd64' }}
+          # 根据输入生成 tag；另推一份不可变的 SHA tag 便于追溯
           tags: |
-            ghcr.io/${{ github.repository_owner }}/tika-chinese:latest
+            ghcr.io/${{ github.repository_owner }}/tika-chinese:${{ inputs.tag || 'latest' }}
             ghcr.io/${{ github.repository_owner }}/tika-chinese:${{ github.sha }}
+          # 强制拉取最新基础镜像以追踪 upstream
+          pull: ${{ inputs.pull_base || 'true' }}
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: Move cache
         if: always()
