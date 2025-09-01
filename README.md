@@ -16,6 +16,8 @@ docker pull ghcr.io/yalecheng404/tika-chinese:latest
 docker run --rm -p 9998:9998 ghcr.io/yalecheng404/tika-chinese:latest
 ```
 
+
+
 Copyright 2025 YaleCheng404
 
 This software is a derivative work based on Apache Tika (https://tika.apache.org/) and its Docker distribution (https://github.com/apache/tika-docker/), both licensed under the Apache License 2.0.
