@@ -1,15 +1,20 @@
-# This Dockerfile is a modification of Apache Tika’s official Dockerfile.
-# Modifications: Added installation of Chinese OCR language packs (chi_sim, chi_tra).
-# Original copyright and NOTICE have been preserved per Apache License 2.0.
+# This Dockerfile extends Apache Tika’s official image with additional
+# Tesseract OCR language data while keeping the final image lean. It exposes a
+# few build arguments so users can pick different bases or install extra
+# language packs when needed.
 
-FROM apache/tika:latest-full
+ARG TIKA_BASE=apache/tika:latest-full
+FROM ${TIKA_BASE}
 USER root
-RUN set -eux \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-       tesseract-ocr-chi-sim \
-       tesseract-ocr-chi-tra \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Tesseract language packs are passed as a space separated list so callers can
+# add more languages without editing the Dockerfile, for example
+# "tesseract-ocr-chi-sim tesseract-ocr-jpn".
+ARG TESSERACT_LANGS="tesseract-ocr-chi-sim tesseract-ocr-chi-tra"
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ${TESSERACT_LANGS}; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 USER 35002:35002
 EXPOSE 9998
