@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - "Dockerfile.tika-chinese"
+      - "Dockerfile"
       - ".github/workflows/build-publish.yml"
   release:
     types: [published]
