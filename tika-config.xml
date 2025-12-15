@@ -11,7 +11,7 @@
     <!-- 可选但强烈建议：针对“扫描版PDF”为主的场景，让 PDFParser 自动决定是否对页面渲染做 OCR -->
     <parser class="org.apache.tika.parser.pdf.PDFParser">
       <params>
-        <param name="ocrStrategy" type="string">auto</param>
+        <param name="ocrStrategy" type="string">AUTO</param>
       </params>
     </parser>
   </parsers>
