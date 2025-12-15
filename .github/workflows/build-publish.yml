@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - "Dockerfile"
+      - "tika-config.xml"
       - ".github/workflows/build-publish.yml"
   release:
     types: [published]
