@@ -7,6 +7,7 @@ RUN set -eux; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       tesseract-ocr-chi-sim \
       tesseract-ocr-eng \
+      tesseract-ocr-osd \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
