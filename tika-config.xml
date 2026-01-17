@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<properties>
+  <parsers>
+    <!-- 关键：显式配置 TesseractOCRParser 的默认 language -->
+    <parser class="org.apache.tika.parser.ocr.TesseractOCRParser">
+      <params>
+        <param name="language" type="string">chi_sim+eng</param>
+      </params>
+    </parser>
+
+    <!-- 可选但强烈建议：针对“扫描版PDF”为主的场景，让 PDFParser 自动决定是否对页面渲染做 OCR -->
+    <parser class="org.apache.tika.parser.pdf.PDFParser">
+      <params>
+        <param name="ocrStrategy" type="string">AUTO</param>
+      </params>
+    </parser>
+  </parsers>
+</properties>

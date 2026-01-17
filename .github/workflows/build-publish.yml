@@ -2,19 +2,20 @@ name: Build & Publish Tika (Chinese)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
-      - "Dockerfile.tika-chinese"
+      - "Dockerfile"
+      - "tika-config.xml"
       - ".github/workflows/build-publish.yml"
   release:
     types: [published]
   schedule:
-    # 每月1号 07:00 UTC 定时重建，跟进 apache/tika:latest-full 的更新
-    - cron: "0 7 1 * ?"
-  workflow_dispatch:            # ← 手动触发
+    # 每月1号 07:00 UTC
+    - cron: "0 7 1 * *"
+  workflow_dispatch:
     inputs:
       tag:
-        description: "镜像标签（默认 latest）"
+        description: "镜像标签（默认 latest；release 事件会自动用 release tag）"
         required: false
         default: "latest"
       platforms:
@@ -28,17 +29,30 @@ on:
 
 permissions:
   contents: read
-  packages: write   # 推送到 GHCR 的关键权限
+  packages: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: tika-chinese
+      OWNER_LC: ${{ github.repository_owner }}
+      # release 用发布 tag，其它事件用 workflow_dispatch 输入或默认 latest
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.event.inputs.tag || 'latest') }}
+      PLATFORMS: ${{ github.event.inputs.platforms || 'linux/amd64' }}
+      PULL_BASE: ${{ github.event.inputs.pull_base || 'true' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Normalize lowercase owner
+        shell: bash
+        run: |
+          echo "OWNER_LC=${OWNER_LC,,}" >> $GITHUB_ENV
+
       - name: Set up QEMU (multi-arch)
-        if: ${{ github.event.inputs.platforms && contains(github.event.inputs.platforms, 'arm') }}
+        if: ${{ contains(env.PLATFORMS, 'arm64') }}
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
@@ -51,16 +65,6 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-
-      # 关键：将 OWNER/REPO 都转为小写，供 tag 使用
-      - name: Compute lowercase names
-        run: |
-          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
-          # 仓库名来自 GITHUB_REPOSITORY=Owner/Repo，取斜杠后部分再转小写
-          REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          echo "REPO_LC=${REPO_NAME,,}" >> $GITHUB_ENV
-          # 可自定义镜像名（本例固定为 tika-chinese）
-          echo "IMAGE_NAME=tika-chinese" >> $GITHUB_ENV
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -76,15 +80,14 @@ jobs:
           context: .
           file: ./Dockerfile.tika-chinese
           push: true
-          platforms: ${{ inputs.platforms || 'linux/amd64' }}
-          pull: ${{ inputs.pull_base || 'true' }}
+          platforms: ${{ env.PLATFORMS }}
+          pull: ${{ env.PULL_BASE == 'true' }}
           tags: |
-            ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:${{ inputs.tag || 'latest' }}
+            ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
             ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      # 只有构建成功才移动缓存，避免你日志里的二次报错
       - name: Move cache
         if: ${{ success() && steps.build.outcome == 'success' }}
         run: |
